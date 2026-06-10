@@ -5,6 +5,7 @@ use egui::TextureHandle;
 use eframe::{App, Frame};
 use egui::{Color32, Window, Modal};
 use uuid::Uuid;
+use image::buffer::ConvertBuffer;
 
 use crate::app::{
     GuiMode,
