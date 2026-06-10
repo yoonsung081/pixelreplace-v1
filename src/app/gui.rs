@@ -327,12 +327,13 @@ impl App for ObamifyApp {
                         {
                             self.gif_recorder.status = GifStatus::Recording;
                             self.gif_recorder.encoder = None;
-                            // 명시적으로 RwLockReadGuard를 드롭하기 위해 clone 사용
-                            let colors = self.colors.read().unwrap().clone();
-                            match self
-                                .gif_recorder
-                                .init_encoder(colors.as_ref())
-                            {
+                            // 읽기 잠금을 명시적으로 해제하기 위해 블록 범위 사용
+                            let init_result = {
+                                let colors = self.colors.read().unwrap();
+                                self.gif_recorder.init_encoder(colors.as_ref())
+                            };  // 여기서 읽기 잠금 자동 해제
+                            
+                            match init_result {
                                 Err(err) => {
                                     self.gif_recorder.status = GifStatus::Error(err.to_string());
                                 }
@@ -1165,7 +1166,7 @@ impl ObamifyApp {
 
 // ─────────────────────────────────────────────
 //  Texture write helper
-// ─────────────────────────────────────────────
+// ────────────────��────────────────────────────
 
 fn write_texture(
     queue: &wgpu::Queue,
