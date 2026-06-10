@@ -327,9 +327,11 @@ impl App for ObamifyApp {
                         {
                             self.gif_recorder.status = GifStatus::Recording;
                             self.gif_recorder.encoder = None;
+                            // 명시적으로 RwLockReadGuard를 드롭하기 위해 clone 사용
+                            let colors = self.colors.read().unwrap().clone();
                             match self
                                 .gif_recorder
-                                .init_encoder(self.colors.read().unwrap().as_ref())
+                                .init_encoder(colors.as_ref())
                             {
                                 Err(err) => {
                                     self.gif_recorder.status = GifStatus::Error(err.to_string());
