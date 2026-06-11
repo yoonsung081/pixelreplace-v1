@@ -643,18 +643,14 @@ impl App for ObamifyApp {
                                         {
                                             settings.set_raw_target(img.clone());
                                             cache.target_preview = None;
-                                            cache.overlap_preview = None;
-                                            app.gui.fixed_target = Some(img.clone());
-                                            // Resize source image to match new target size
-                                            *src = image::imageops::resize(
-                                                src,
-                                                img.width(),
-                                                img.height(),
-                                                image::imageops::FilterType::Nearest,
-                                            );
-                                            cache.source_preview = None;
-                                            // Do NOT close configuring_generation here —
-                                            // the user still needs to click OK to start the job.
+                                            app.gui.fixed_target = Some(img);
+                                            if app.gui.workflow_state
+                                                == WorkflowState::WaitingForTarget
+                                            {
+                                                app.gui.workflow_state =
+                                                    WorkflowState::WaitingForSource;
+                                            }
+                                            app.gui.configuring_generation = None;
                                         }
                                     },
                                 );
