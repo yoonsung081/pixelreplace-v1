@@ -1060,12 +1060,15 @@ impl ObamifyApp {
     }
 
     fn update_seed_texture_data(&self, queue: &wgpu::Queue, seeds: &[SeedPos]) {
-        // Update seed texture data without recreating the texture
+        // Update seed texture data without recreating the texture.
+        // IMPORTANT: use the actual texture size (based on seed_count that was used
+        // when the texture was created in make_seed_texture) to avoid buffer overruns.
         const TEX_WIDTH: u32 = 1024;
         let tex_height = self.seed_count.div_ceil(TEX_WIDTH);
+        let total_texels = (TEX_WIDTH * tex_height) as usize;
 
-        let mut data = vec![0.0f32; (TEX_WIDTH * tex_height * 2) as usize];
-        for (i, seed) in seeds.iter().enumerate() {
+        let mut data = vec![0.0f32; total_texels * 2];
+        for (i, seed) in seeds.iter().take(total_texels).enumerate() {
             data[i * 2] = seed.xy[0];
             data[i * 2 + 1] = seed.xy[1];
         }
@@ -1624,10 +1627,11 @@ impl ObamifyApp {
         // Update the color lookup texture with modified colors
         const TEX_WIDTH: u32 = 1024;
         let tex_height = self.seed_count.div_ceil(TEX_WIDTH);
+        let total_texels = (TEX_WIDTH * tex_height) as usize;
 
         let colors = self.colors.read().unwrap();
-        let mut data = vec![0.0f32; (TEX_WIDTH * tex_height * 4) as usize];
-        for (i, color) in colors.iter().enumerate() {
+        let mut data = vec![0.0f32; total_texels * 4];
+        for (i, color) in colors.iter().take(total_texels).enumerate() {
             data[i * 4] = color.rgba[0];
             data[i * 4 + 1] = color.rgba[1];
             data[i * 4 + 2] = color.rgba[2];
