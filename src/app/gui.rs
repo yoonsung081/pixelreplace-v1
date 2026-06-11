@@ -182,17 +182,18 @@ impl App for ObamifyApp {
 
         // ── GPU / texture upload ──────────────────────────────────────────
         if let Some(img) = &self.preview_image {
-            let img = if img.width() != self.size.0 || img.height() != self.size.1 {
-                &image::imageops::resize(
+            // Store resized image in a named variable to extend its lifetime
+            let resized_img = if img.width() != self.size.0 || img.height() != self.size.1 {
+                image::imageops::resize(
                     img,
                     self.size.0,
                     self.size.1,
                     image::imageops::FilterType::Nearest,
                 )
             } else {
-                img
+                img.clone()
             };
-            let rgba: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> = img.convert();
+            let rgba: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> = resized_img.convert();
             write_texture(&rs.queue, &self.color_tex, self.size, &rgba.into_raw());
         } else {
             match self.gui.workflow_state {
@@ -202,8 +203,19 @@ impl App for ObamifyApp {
                 }
                 WorkflowState::WaitingForSource => {
                     if let Some(ref target_img) = self.gui.fixed_target {
+                        // Resize target image to match display size before uploading
+                        let resized_target = if target_img.width() != self.size.0 || target_img.height() != self.size.1 {
+                            image::imageops::resize(
+                                target_img,
+                                self.size.0,
+                                self.size.1,
+                                image::imageops::FilterType::Nearest,
+                            )
+                        } else {
+                            target_img.clone()
+                        };
                         let rgba: image::ImageBuffer<image::Rgba<u8>, Vec<u8>> =
-                            target_img.convert();
+                            resized_target.convert();
                         write_texture(&rs.queue, &self.color_tex, self.size, &rgba.into_raw());
                     } else {
                         self.run_gpu(rs);
@@ -624,12 +636,20 @@ impl App for ObamifyApp {
                                     self,
                                     |_, mut img: SourceImg, app: &mut ObamifyApp| {
                                         img = ensure_reasonable_size(img);
-                                        if let Some((_, settings, cache)) =
+                                        if let Some((src, settings, cache)) =
                                             &mut app.gui.configuring_generation
                                         {
                                             settings.set_raw_target(img.clone());
                                             cache.target_preview = None;
-                                            app.gui.fixed_target = Some(img);
+                                            app.gui.fixed_target = Some(img.clone());
+                                            // Resize source image to match new target size
+                                            *src = image::imageops::resize(
+                                                src,
+                                                img.width(),
+                                                img.height(),
+                                                image::imageops::FilterType::Nearest,
+                                            );
+                                            cache.source_preview = None;
                                             if app.gui.workflow_state
                                                 == WorkflowState::WaitingForTarget
                                             {
